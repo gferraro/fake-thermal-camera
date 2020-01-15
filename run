@@ -1,0 +1,135 @@
+#!/usr/bin/env python3
+
+import argparse
+import os
+import subprocess
+import getpass
+import grp
+import urllib.request
+
+IMAGE_NAME = "cacophony-fake-thermal-camera"
+CONTAINER_NAME = "cacophony-fake-thermal-camera"
+
+
+parser = argparse.ArgumentParser(
+    description="Run a fake cacophony thermal recorder server inside a Docker container"
+)
+parser.add_argument(
+    "--isolate",
+    default=False,
+    action="store_true",
+    help="Re-install npm dependencies, don't restart server when code changes",
+)
+parser.add_argument(
+    "--background",
+    default=False,
+    action="store_true",
+    help="Run container in background & don't show container logs",
+)
+parser.add_argument(
+    "--no-cache",
+    dest="cache",
+    default=True,
+    action="store_false",
+    help="Don't use previously cached Docker images; rebuild them all",
+)
+
+# Set to false if your current user is already in the docker user group
+parser.add_argument(
+    "--sudo", default=False, action="store_true", help="Run commands with sudo"
+)
+args = parser.parse_args()
+
+# Run docker ps without sudo to check if it can be used without
+def check_docker_can_run():
+    return subprocess.call(
+        ["docker", "ps"],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        timeout=30,
+    )
+
+
+def current_user_in_group(group_name):
+    try:
+        current_user = getpass.getuser()
+        return current_user in grp.getgrnam(group_name).gr_mem
+    except KeyError:
+        return False
+
+
+use_sudo = args.sudo
+if not args.sudo:
+    if not current_user_in_group("docker"):
+        if check_docker_can_run() != 0:
+            use_sudo = True
+
+print("Running commands with sudo {}".format(use_sudo))
+
+
+def add_sudo(cmd_list):
+    if use_sudo:
+        cmd_list.insert(0, "sudo")
+    return cmd_list
+
+print("Stopping {} container (if running)".format(CONTAINER_NAME))
+remove_container_cmd = ["docker", "rm", "--force", CONTAINER_NAME]
+subprocess.call(
+    add_sudo(remove_container_cmd), stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT
+)
+
+print("Building container")
+build_container_cmd = ["docker", "build", ".", "-t", IMAGE_NAME]
+if not args.cache:
+    build_container_cmd.append("--no-cache")
+subprocess.check_call(add_sudo(build_container_cmd))
+
+print('go path is ' + os.environ['GOPATH'])
+
+print("Starting container")
+print("volume is " +  os.getcwd())
+run_cmd = [
+    "docker",
+    "run",
+    "-td",
+    "--rm",
+    "--name",
+    CONTAINER_NAME,
+    "-p",
+    "2040:2040",
+    "--volume",
+    os.getcwd() +  ":/server",
+    "--volume",
+    os.path.dirname(os.getcwd()) +  ":/code",
+    "--volume",
+    os.environ['GOPATH'] + ":/go",
+]
+
+# if args.isolate:
+#     run_cmd.extend(
+#         [
+#             "-e",
+#             "ISOLATE=1",  # copy code to a separate location & run "npm install"
+#             "--volume",
+#             "/app/node_modules",  # don't pass node_modules directory through
+#             "-e",
+#             "NODE_BIN=node",  # use node to run the server
+#         ]
+#     )
+# else:
+#     run_cmd.extend(
+#         [
+#             "-e",
+#             "NODE_BIN=nodemon",  # use nodemon to restart the server when the code changes
+#         ]
+#     )
+run_cmd.append(IMAGE_NAME)
+subprocess.check_call(add_sudo(run_cmd))
+
+if not args.background:
+    print("\nShowing container logs")
+    try:
+        docker_logs_cmd = ["docker", "logs", "--follow", CONTAINER_NAME]
+        subprocess.call(add_sudo(docker_logs_cmd))
+    except (KeyboardInterrupt, PermissionError):
+        pass
