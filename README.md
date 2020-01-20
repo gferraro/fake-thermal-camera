@@ -19,11 +19,11 @@ In the fake-thermal-camera folder start the test server with
 > ./run
 ```
 
-Call the create URL to create your test-mock.
+Now you can start calling server commands
 
 ## Current server commands
 ```
-GET http://localhost:2050/create/{device-name}?group-name={group-name}  Create a new device
+GET http://localhost:2040/create/{device-name}?group-name={group-name}  Create a new device.  Needs to be called before any other command.
 ```
 
 Note that the server currently only runs one device at a time. Once a new device is created it is no longer possible to use old devices.

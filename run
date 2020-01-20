@@ -14,12 +14,12 @@ CONTAINER_NAME = "cacophony-fake-thermal-camera"
 parser = argparse.ArgumentParser(
     description="Run a fake cacophony thermal recorder server inside a Docker container"
 )
-parser.add_argument(
-    "--isolate",
-    default=False,
-    action="store_true",
-    help="Re-install npm dependencies, don't restart server when code changes",
-)
+# parser.add_argument(
+#     "--isolate",
+#     default=False,
+#     action="store_true",
+#     help="Re-install npm dependencies, don't restart server when code changes",
+# )
 parser.add_argument(
     "--background",
     default=False,
