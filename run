@@ -100,7 +100,7 @@ run_cmd = [
     "--volume",
     os.getcwd() +  ":/server",
     "--volume",
-    os.path.dirname(os.getcwd()) +  ":/code",
+    os.path.dirname(os.getcwd()) + "/device-register" +  ":/code/device-register",
     "--volume",
     os.environ['GOPATH'] + ":/go",
 ]
