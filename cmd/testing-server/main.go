@@ -1,9 +1,9 @@
 package main
 
 import (
+	"io"
 	"log"
 	"net/http"
-	"io"
 	"os/exec"
 
 	"github.com/gorilla/mux"
@@ -23,6 +23,7 @@ func runServer() error {
 	router := mux.NewRouter()
 	router.HandleFunc("/create/{device-name}", createDeviceHandler)
 	router.HandleFunc("/", homeHandler)
+	router.HandleFunc("/uploadevent/{type}", uploadEventHandler)
 
 	log.Fatal(http.ListenAndServe(":2040", router))
 	return nil
@@ -47,16 +48,16 @@ func createDeviceHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		log.Printf("Creating device " + deviceName + " and group-name " + groupnames[0] + " on server " + apiServer)
 		cmd := exec.Command("./device-register",
-												"--name",
-												deviceName,
-												"--group",
-												groupnames[0],
-												"--password",
-												"password_" + deviceName,
-												"--api",
-												apiServer,
-												"--ignore-minion-id",
-												"--remove-device-config")
+			"--name",
+			deviceName,
+			"--group",
+			groupnames[0],
+			"--password",
+			"password_"+deviceName,
+			"--api",
+			apiServer,
+			"--ignore-minion-id",
+			"--remove-device-config")
 
 		cmd.Dir = "/code/device-register"
 
@@ -74,3 +75,17 @@ func createDeviceHandler(w http.ResponseWriter, r *http.Request) {
 func serverError(w *http.ResponseWriter, err error) {
 	log.Printf("server error: %v", err)
 }
+
+
+func uploadEventHandler(w http.ResponseWriter, r *http.Request) {
+	eventType := mux.Vars(r)["type"]
+	eventDetails := map[string]interface{}{
+		"description": map[string]interface{}{
+			"type": eventType,
+		},
+	}
+	groupnames, ok := r.URL.Query()["typ-name"]
+	if !ok {
+		log.Printf("'group-name' query parameter is missing")
+		http.Error(w, "'group-name' query parameter is missing", http.StatusBadRequest)
+	} else {
