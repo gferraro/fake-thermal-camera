@@ -102,6 +102,8 @@ run_cmd = [
     "--volume",
     os.path.dirname(os.getcwd()) + "/device-register" +  ":/code/device-register",
     "--volume",
+    os.path.dirname(os.getcwd()) + "/event-reporter" +  ":/code/event-reporter",
+    "--volume",
     os.environ['GOPATH'] + ":/go",
 ]
 
