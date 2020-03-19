@@ -22,7 +22,7 @@ go build
 # systemctl start event-report.service
 # cd ../..
 cp ../../_release/org.cacophony.Events.conf /etc/dbus-1/system.d/org.cacophony.Events.conf
-./event-reporter --interval 30s &
+./event-reporter --interval 2s &
 disown
 echo --- test-server ----
 cd /server
