@@ -72,26 +72,19 @@ func createDeviceHandler(w http.ResponseWriter, r *http.Request) {
 			log.Printf("Error was " + outputString)
 			http.Error(w, outputString, http.StatusInternalServerError)
 		} else {
-			log.Printf("device created again wtf")
-			restartThermalUploader()
+			startThermalUploader()
 			deviceID, err := getDeviceID()
 			if err != nil {
 				http.Error(w, fmt.Sprintf("Could not read device id %v", err), http.StatusInternalServerError)
 			}
-			log.Printf("device created so what %v", deviceID)
-
 			io.WriteString(w, fmt.Sprintf("%d", deviceID))
 		}
 	}
 }
 
-func restartThermalUploader() {
-	log.Printf("restarting thermal uploader")
-	cmd := exec.Command("pkill", "thermal-uploader")
-	cmd.Start()
-
-	cmd = exec.Command("thermal-uploader")
-	cmd.Dir = "/code/thermal-uploader"
+func startThermalUploader() {
+	log.Printf("starting thermal uploader")
+	cmd := exec.Command("supervisorctl", "start", "thermal-uploader")
 	cmd.Start()
 }
 func getDeviceID() (int, error) {
