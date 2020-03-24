@@ -108,7 +108,7 @@ func runMain() error {
         if err == io.EOF {
             break
         }
-        buf := getTelemetryBytes(frame.Status)
+        buf := rawTelemetryBytes(frame.Status)
         _ = binary.Write(buf, binary.BigEndian, reaminingBytes)
         for _, row := range frame.Pix {
             for x, _ := range row {
@@ -121,20 +121,17 @@ func runMain() error {
         if _, err := conn.Write(bytearr); err != nil {
             return err
         }
-        // return nil
     }
-    fmt.Printf("send %d", count)
     return nil
 }
 
 func ToK(c float64) centiK {
     return centiK(c*100 + 27315)
 }
-func getTelemetryBytes(t cptvframe.Telemetry) *bytes.Buffer {
+
+func rawTelemetryBytes(t cptvframe.Telemetry) *bytes.Buffer {
     var tw telemetryWords
     tw.TimeOn = ToMS(t.TimeOn)
-    fmt.Printf("Time on is %v\n", t)
-
     tw.StatusBits = ffcStateToStatus(t.FFCState)
     tw.FrameCounter = uint32(t.FrameCount)
     tw.FrameMean = t.FrameMean
@@ -171,23 +168,6 @@ type centiK uint16
 func ToMS(d time.Duration) durationMS {
     return durationMS(d / time.Millisecond)
 }
-
-// // ParseTelemetry converts a slice containing raw Lepton 3 telemetry
-// // data into a Telemetry struct.
-// func ParseTelemetry(raw []byte, t *cptvframe.Telemetry) error {
-//     var tw telemetryWords
-//     if err := binary.Read(bytes.NewBuffer(raw), Big16, &tw); err != nil {
-//         return err
-//     }
-//     t.TimeOn = tw.TimeOn.ToD()
-//     t.FFCState = statusToFFCState(tw.StatusBits)
-//     t.FrameCount = int(tw.FrameCounter)
-//     t.FrameMean = tw.FrameMean
-//     t.TempC = tw.FPATemp.ToC()
-//     t.LastFFCTempC = tw.FPATempLastFFC.ToC()
-//     t.LastFFCTime = tw.TimeCounterLastFFC.ToD()
-//     return nil
-// }
 
 type telemetryWords struct {
     TelemetryRevision  uint16     // 0  *

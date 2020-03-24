@@ -5,9 +5,16 @@ FROM golang:latest
 
 RUN apt-get update
 RUN apt-get install -y apt-utils
+RUN apt-get install -y supervisor
+RUN apt-get install -y dbus
+RUN mkdir -p /var/run/dbus
 
+RUN mkdir -p /var/log/supervisor
 # server for automated testing
 EXPOSE 2040
+
+COPY  thermal-recorder.conf /etc/supervisor/conf.d/thermal-recorder.conf
+
 
 # WORKDIR /server
 # RUN ls
@@ -15,8 +22,9 @@ EXPOSE 2040
 # RUN go build ./...
 # RUN testing-server
 COPY  docker-entrypoint.sh /
-
 RUN mkdir /etc/cacophony
-RUN echo "" > /etc/cacophony/config.toml
+RUN mkdir /var/spool/cptv
+
+COPY recorder-config.toml /etc/cacophony/config.toml
 
 ENTRYPOINT ["/docker-entrypoint.sh"]

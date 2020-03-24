@@ -104,6 +104,10 @@ run_cmd = [
     "--volume",
     os.path.dirname(os.getcwd()) + "/event-reporter" +  ":/code/event-reporter",
     "--volume",
+    os.path.dirname(os.getcwd()) + "/thermal-recorder" +  ":/code/thermal-recorder",
+    "--volume",
+    os.path.dirname(os.getcwd()) + "/thermal-uploader" +  ":/code/thermal-uploader",
+    "--volume",
     os.environ['GOPATH'] + ":/go",
 ]
 

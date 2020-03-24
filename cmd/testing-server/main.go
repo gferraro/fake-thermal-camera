@@ -30,14 +30,13 @@ func runServer() error {
 	router.HandleFunc("/create/{device-name}", createDeviceHandler)
 	router.HandleFunc("/", homeHandler)
 	router.HandleFunc("/triggerEvent/{type}", triggerEventHandler)
-	router.HandleFunc("/newRecording/", newRecordingHandler)
+	router.HandleFunc("/sendCPTVFrames", sendCPTVFramesHandler)
 
 	log.Fatal(http.ListenAndServe(":2040", router))
 	return nil
 }
 
 func homeHandler(w http.ResponseWriter, r *http.Request) {
-	log.Printf("device created")
 	io.WriteString(w, "This is a Fake thermal camera test server.")
 }
 
@@ -73,19 +72,28 @@ func createDeviceHandler(w http.ResponseWriter, r *http.Request) {
 			log.Printf("Error was " + outputString)
 			http.Error(w, outputString, http.StatusInternalServerError)
 		} else {
-			log.Printf("device created")
-
+			log.Printf("device created again wtf")
+			restartThermalUploader()
 			deviceID, err := getDeviceID()
 			if err != nil {
 				http.Error(w, fmt.Sprintf("Could not read device id %v", err), http.StatusInternalServerError)
 			}
-			log.Printf("device created %v", deviceID)
+			log.Printf("device created so what %v", deviceID)
 
 			io.WriteString(w, fmt.Sprintf("%d", deviceID))
 		}
 	}
 }
 
+func restartThermalUploader() {
+	log.Printf("restarting thermal uploader")
+	cmd := exec.Command("pkill", "thermal-uploader")
+	cmd.Start()
+
+	cmd = exec.Command("thermal-uploader")
+	cmd.Dir = "/code/thermal-uploader"
+	cmd.Start()
+}
 func getDeviceID() (int, error) {
 	configRW, err := config.New(config.DefaultConfigDir)
 	if err != nil {
@@ -158,30 +166,21 @@ func newRecordingHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func sendThermalCameraFrames(w http.ResponseWriter, r *http.Request) {
-	eventType := mux.Vars(r)["type"]
-	eventDetails := map[string]interface{}{
-		"description": map[string]interface{}{
-			"type": eventType,
-		},
+func sendCPTVFramesHandler(w http.ResponseWriter, r *http.Request) {
+	fileName := r.URL.Query().Get("cptv-file")
+	var extraCmds []string
+	if fileName != "" {
+		extraCmds = []string{"--cptv", fileName}
 	}
-	ts := time.Now()
-	detailsJSON, err := json.Marshal(&eventDetails)
-	if err != nil {
-		log.Printf("Could not record %s event: %s", eventType, err)
-		return
-	}
+	cmd := exec.Command("./fake-lepton", extraCmds...)
+	cmd.Dir = "/server/cmd/fake-lepton"
 
-	conn, err := dbus.SystemBus()
-	if err != nil {
-		log.Printf("Could not record %s event: %s", eventType, err)
-		return
-	}
-
-	obj := conn.Object("org.cacophony.Events", "/org/cacophony/Events")
-	call := obj.Call("org.cacophony.Events.Add", 0, string(detailsJSON), eventType, ts.UnixNano())
-	if call.Err != nil {
-		log.Printf("Could not record %s event: %s", eventType, call.Err)
-		return
+	if output, err := cmd.CombinedOutput(); err != nil {
+		outputString := string(output)
+		log.Printf("Error was " + outputString)
+		http.Error(w, outputString, http.StatusInternalServerError)
+	} else {
+		log.Printf("Sent CPTV Frames")
+		io.WriteString(w, "Success")
 	}
 }
