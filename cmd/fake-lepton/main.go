@@ -1,5 +1,5 @@
-// thermal-recorder - record thermal video footage of warm moving objects
-//  Copyright (C) 2018, The Cacophony Project
+// fake-lepton - read a cptv file and send it has raw frames to thermal-recorder
+//  Copyright (C) 2020, The Cacophony Project
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -21,29 +21,24 @@ import (
     "encoding/binary"
     "errors"
     "fmt"
-    "github.com/TheCacophonyProject/go-cptv"
-    cptvframe "github.com/TheCacophonyProject/go-cptv/cptvframe"
     "io"
     "log"
     "net"
     "os"
     "time"
 
-    lepton3 "github.com/TheCacophonyProject/lepton3"
-    "github.com/TheCacophonyProject/thermal-recorder/headers"
     arg "github.com/alexflint/go-arg"
     "gopkg.in/yaml.v1"
+
+    "github.com/TheCacophonyProject/go-cptv"
+    cptvframe "github.com/TheCacophonyProject/go-cptv/cptvframe"
+    lepton3 "github.com/TheCacophonyProject/lepton3"
+    "github.com/TheCacophonyProject/thermal-recorder/headers"
 )
 
 const (
     SEND_SOCKET = "/var/run/lepton-frames"
-
-    framesHz = 9 // approx
-
-    frameLogIntervalFirstMin = 15 * framesHz
-    frameLogInterval         = 60 * 5 * framesHz
-
-    framesPerSdNotify = 5 * framesHz
+    framesHz    = 9
 )
 
 type Args struct {
@@ -82,10 +77,6 @@ func runMain() error {
     }
     defer conn.Close()
 
-    log.Print("reading frames")
-
-    r, err := cptv.NewFileReader(args.CPTV)
-    defer r.Close()
     conn.SetWriteBuffer(lepton3.FrameCols * lepton3.FrameCols * 2 * 20)
 
     camera_specs := map[string]interface{}{
@@ -103,6 +94,10 @@ func runMain() error {
     }
 
     conn.Write([]byte("\n"))
+
+    log.Print("reading frames")
+    r, err := cptv.NewFileReader(args.CPTV)
+    defer r.Close()
     frame := r.Reader.EmptyFrame()
     count := 0
     // Telemetry size of 640 -64(size of telemetry words)
@@ -119,18 +114,12 @@ func runMain() error {
                 _ = binary.Write(buf, binary.BigEndian, row[x])
             }
         }
-        bytearr := buf.Bytes()
-
         count++
-        if _, err := conn.Write(bytearr); err != nil {
+        if _, err := conn.Write(buf.Bytes()); err != nil {
             return err
         }
     }
     return nil
-}
-
-func ToK(c float64) centiK {
-    return centiK(c*100 + 27315)
 }
 
 func rawTelemetryBytes(t cptvframe.Telemetry) *bytes.Buffer {
@@ -147,7 +136,6 @@ func rawTelemetryBytes(t cptvframe.Telemetry) *bytes.Buffer {
     return buf
 }
 
-const statusFFCStateMask uint32 = 3 << 4
 const statusFFCStateShift uint32 = 4
 
 func ffcStateToStatus(status string) uint32 {
@@ -164,10 +152,12 @@ func ffcStateToStatus(status string) uint32 {
     return state
 }
 
-type celcius float64
-
 type durationMS uint32
 type centiK uint16
+
+func ToK(c float64) centiK {
+    return centiK(c*100 + 27315)
+}
 
 func ToMS(d time.Duration) durationMS {
     return durationMS(d / time.Millisecond)
