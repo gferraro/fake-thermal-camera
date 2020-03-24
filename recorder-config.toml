@@ -1,0 +1,30 @@
+[thermal-motion]
+  count-thresh = 3
+  delta-thresh = 50
+  edge-pixels = 1
+  frame-compare-gap = 45
+  temp-thresh = 2850
+  trigger-frames = 1
+  use-one-diff-only = true
+  warmer-only = true
+  run-classifier = false
+
+[thermal-recorder]
+  max-secs = 299
+  min-disk-space-mb = 200
+  min-secs = 10
+  output-dir = "/var/spool/cptv"
+  preview-secs = 1
+  updated = 2019-10-10T11:49:24+13:00
+
+[thermal-throttler]
+  activate = true
+  bucket-size = "5m0s"
+  min-refill = "11m4s"
+  updated = 2019-10-10T12:41:55+13:00
+
+[windows]
+  power-off = "0s"
+  power-on = "0s"
+  start-recording = "12:00"
+  stop-recording = "12:00"

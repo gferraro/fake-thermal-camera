@@ -21,13 +21,13 @@ import (
     "encoding/binary"
     "errors"
     "fmt"
+    "github.com/TheCacophonyProject/go-cptv"
+    cptvframe "github.com/TheCacophonyProject/go-cptv/cptvframe"
     "io"
     "log"
     "net"
+    "os"
     "time"
-
-    "github.com/TheCacophonyProject/go-cptv"
-    cptvframe "github.com/TheCacophonyProject/go-cptv/cptvframe"
 
     lepton3 "github.com/TheCacophonyProject/lepton3"
     "github.com/TheCacophonyProject/thermal-recorder/headers"
@@ -66,6 +66,10 @@ func main() {
 
 func runMain() error {
     args := procArgs()
+    if _, err := os.Stat(args.CPTV); err != nil {
+        fmt.Printf("%v does not exist\n", args.CPTV)
+        return err
+    }
 
     log.Printf("dialing frame output socket %s\n", SEND_SOCKET)
     conn, err := net.DialUnix("unix", nil, &net.UnixAddr{
