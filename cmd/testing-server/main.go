@@ -69,9 +69,10 @@ func createDeviceHandler(w http.ResponseWriter, r *http.Request) {
 
 		if output, err := cmd.CombinedOutput(); err != nil {
 			outputString := string(output)
-			log.Printf("Error was " + outputString)
+			log.Printf("Error was %v", outputString)
 			http.Error(w, outputString, http.StatusInternalServerError)
 		} else {
+			log.Printf("device created")
 			restartThermalUploader()
 			deviceID, err := getDeviceID()
 			if err != nil {
@@ -83,7 +84,7 @@ func createDeviceHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func restartThermalUploader() {
-	log.Printf("starting thermal uploader")
+	log.Printf("restarting thermal uploader")
 	cmd := exec.Command("supervisorctl", "restart", "thermal-uploader")
 	cmd.Start()
 }
@@ -131,34 +132,6 @@ func triggerEventHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func newRecordingHandler(w http.ResponseWriter, r *http.Request) {
-	eventType := mux.Vars(r)["type"]
-	eventDetails := map[string]interface{}{
-		"description": map[string]interface{}{
-			"type": eventType,
-		},
-	}
-	ts := time.Now()
-	detailsJSON, err := json.Marshal(&eventDetails)
-	if err != nil {
-		log.Printf("Could not record %s event: %s", eventType, err)
-		return
-	}
-
-	conn, err := dbus.SystemBus()
-	if err != nil {
-		log.Printf("Could not record %s event: %s", eventType, err)
-		return
-	}
-
-	obj := conn.Object("org.cacophony.Events", "/org/cacophony/Events")
-	call := obj.Call("org.cacophony.Events.Add", 0, string(detailsJSON), eventType, ts.UnixNano())
-	if call.Err != nil {
-		log.Printf("Could not record %s event: %s", eventType, call.Err)
-		return
-	}
-}
-
 func sendCPTVFramesHandler(w http.ResponseWriter, r *http.Request) {
 	fileName := r.URL.Query().Get("cptv-file")
 	var extraCmds []string
@@ -170,7 +143,7 @@ func sendCPTVFramesHandler(w http.ResponseWriter, r *http.Request) {
 
 	if output, err := cmd.CombinedOutput(); err != nil {
 		outputString := string(output)
-		log.Printf("Error was " + outputString)
+		log.Printf("Error was %v\n", outputString)
 		http.Error(w, outputString, http.StatusInternalServerError)
 	} else {
 		log.Printf("Sent CPTV Frames")
