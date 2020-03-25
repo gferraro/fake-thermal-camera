@@ -33,12 +33,12 @@ cd cmd/fake-lepton/
 go build
 cp org.cacophony.FakeLepton.conf /etc/dbus-1/system.d/org.cacophony.FakeLepton.conf
 
-
 echo --- management interface ----
 cd /code/management-interface/
-echo Building management-interface....
-make build
-
+go build
+echo Starting management-interface....
+./managementd &
+disown
 
 echo --- starting supervisord ---
 /usr/bin/supervisord &
