@@ -7,8 +7,8 @@ import getpass
 import grp
 import urllib.request
 
-IMAGE_NAME = "cacophony-fake-thermal-camera"
-CONTAINER_NAME = "cacophony-fake-thermal-camera"
+IMAGE_NAME = "cacophony-fake-thermal-camera2"
+CONTAINER_NAME = "cacophony-fake-thermal-camera2"
 
 
 parser = argparse.ArgumentParser(
@@ -88,6 +88,9 @@ print('go path is ' + os.environ['GOPATH'])
 
 print("Starting container")
 print("volume is " +  os.getcwd())
+
+base_path = os.path.dirname(os.getcwd())
+
 run_cmd = [
     "docker",
     "run",
@@ -97,18 +100,22 @@ run_cmd = [
     CONTAINER_NAME,
     "-p",
     "2040:2040",
+    "-p",
+    "2041:80",
     "--volume",
     os.getcwd() +  ":/server",
     "--volume",
-    os.path.dirname(os.getcwd()) + "/device-register" +  ":/code/device-register",
+    os.getcwd() +  "/cptv-files" + ":/cptv-files",
     "--volume",
-    os.path.dirname(os.getcwd()) + "/event-reporter" +  ":/code/event-reporter",
+    base_path + "/device-register" +  ":/code/device-register",
     "--volume",
-    os.path.dirname(os.getcwd()) + "/thermal-recorder" +  ":/code/thermal-recorder",
+    base_path + "/event-reporter" +  ":/code/event-reporter",
     "--volume",
-    os.path.dirname(os.getcwd()) + "/thermal-uploader" +  ":/code/thermal-uploader",
+    base_path + "/thermal-recorder" +  ":/code/thermal-recorder",
     "--volume",
-    os.path.dirname(os.getcwd()) + "/management-interface" +  ":/code/management-interface",
+    base_path + "/thermal-uploader" +  ":/code/thermal-uploader",
+    "--volume",
+    base_path+ "/management-interface" +  ":/code/management-interface",
     "--volume",
     os.environ['GOPATH'] + ":/go",
 ]
