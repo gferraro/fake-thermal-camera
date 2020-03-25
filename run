@@ -88,6 +88,7 @@ print('go path is ' + os.environ['GOPATH'])
 
 print("Starting container")
 print("volume is " +  os.getcwd())
+base_path = os.path.dirname(os.getcwd())
 run_cmd = [
     "docker",
     "run",
@@ -100,15 +101,17 @@ run_cmd = [
     "--volume",
     os.getcwd() +  ":/server",
     "--volume",
-    os.path.dirname(os.getcwd()) + "/device-register" +  ":/code/device-register",
+    base_path + "/device-register" +  ":/code/device-register",
     "--volume",
-    os.path.dirname(os.getcwd()) + "/event-reporter" +  ":/code/event-reporter",
+    base_path + "/event-reporter" +  ":/code/event-reporter",
     "--volume",
-    os.path.dirname(os.getcwd()) + "/thermal-recorder" +  ":/code/thermal-recorder",
+    base_path + "/thermal-recorder" +  ":/code/thermal-recorder",
     "--volume",
-    os.path.dirname(os.getcwd()) + "/thermal-uploader" +  ":/code/thermal-uploader",
+    base_path + "/thermal-uploader" +  ":/code/thermal-uploader",
     "--volume",
-    os.path.dirname(os.getcwd()) + "/management-interface" +  ":/code/management-interface",
+    base_path + "/management-interface" +  ":/code/management-interface",
+    "--volume",
+    os.getcwd() + "/cmd/fake-lepton/cptv-files" +  ":/cptv-files",
     "--volume",
     os.environ['GOPATH'] + ":/go",
 ]

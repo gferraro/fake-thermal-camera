@@ -26,8 +26,11 @@ import (
     "log"
     "net"
     "os"
+    "path"
     "sync"
     "time"
+
+    arg "github.com/alexflint/go-arg"
 
     "github.com/TheCacophonyProject/go-cptv"
     cptvframe "github.com/TheCacophonyProject/go-cptv/cptvframe"
@@ -36,13 +39,26 @@ import (
 )
 
 const (
-    SEND_SOCKET = "/var/run/lepton-frames"
-    framesHz    = 9
+    sendSocket = "/var/run/lepton-frames"
+    framesHz   = 9
+    sleepTime  = 30 * time.Second
 )
 
 var (
-    mu sync.Mutex
+    mu      sync.Mutex
+    wg      sync.WaitGroup
+    cptvDir = "/cptv-files"
 )
+
+type argSpec struct {
+    CPTVDir string `arg:"-c,--cptv-dir" help:"base path of cptv files"`
+}
+
+func procArgs() argSpec {
+    args := argSpec{CPTVDir: cptvDir}
+    arg.MustParse(&args)
+    return args
+}
 
 func main() {
     err := runMain()
@@ -54,26 +70,39 @@ func main() {
 }
 
 func runMain() error {
-
-    log.Printf("dialing frame output socket %s\n", SEND_SOCKET)
-    conn, err := net.DialUnix("unix", nil, &net.UnixAddr{
-        Net:  "unix",
-        Name: SEND_SOCKET,
-    })
-    defer conn.Close()
-
-    if err != nil {
-        fmt.Printf("error %v\n", err)
-        return errors.New("error: connecting to frame output socket failed")
-    }
+    args := procArgs()
+    cptvDir = args.CPTVDir
 
     log.Println("starting d-bus service")
-    err = startService(conn)
+    dbusService, err := startService(nil)
     if err != nil {
         return err
     }
 
+    for {
+        err := connectToSocket(dbusService)
+        if err != nil {
+            fmt.Printf("Could not connect to socket %v will try again in %v\n", err, sleepTime)
+            time.Sleep(sleepTime)
+        } else {
+            fmt.Print("Disconnected\n")
+        }
+    }
+}
+
+func connectToSocket(dbusService *service) error {
+    log.Printf("dialing frame output socket %s\n", sendSocket)
+    conn, err := net.DialUnix("unix", nil, &net.UnixAddr{
+        Net:  "unix",
+        Name: sendSocket,
+    })
+    if err != nil {
+        fmt.Printf("error %v\n", err)
+        return errors.New("error: connecting to frame output socket failed")
+    }
+    defer conn.Close()
     conn.SetWriteBuffer(lepton3.FrameCols * lepton3.FrameCols * 2 * 20)
+    dbusService.conn = conn
 
     camera_specs := map[string]interface{}{
         headers.YResolution: lepton3.FrameRows,
@@ -91,19 +120,21 @@ func runMain() error {
 
     conn.Write([]byte("\n"))
     fmt.Printf("Listening for send cptv ...")
-    select {}
+    wg.Add(1)
+    wg.Wait()
+    return nil
 }
 
 func sendCPTV(conn *net.UnixConn, file string) error {
     mu.Lock()
     defer mu.Unlock()
-
-    if _, err := os.Stat(file); err != nil {
-        fmt.Printf("%v does not exist\n", file)
+    fullpath := path.Join(cptvDir, file)
+    if _, err := os.Stat(fullpath); err != nil {
+        fmt.Printf("%v does not exist\n", fullpath)
         return err
     }
-    log.Printf("sending raw frames of %v\n", file)
-    r, err := cptv.NewFileReader(file)
+    log.Printf("sending raw frames of %v\n", fullpath)
+    r, err := cptv.NewFileReader(fullpath)
     if err != nil {
         return err
     }
@@ -126,6 +157,8 @@ func sendCPTV(conn *net.UnixConn, file string) error {
         }
         count++
         if _, err := conn.Write(buf.Bytes()); err != nil {
+            // reconnect to socket
+            wg.Done()
             return err
         }
     }

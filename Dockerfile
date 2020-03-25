@@ -12,7 +12,8 @@ RUN mkdir -p /var/run/dbus
 RUN mkdir -p /var/log/supervisor
 # server for automated testing
 EXPOSE 2040
-
+EXPOSE 80
+    
 COPY  thermal-recorder.conf /etc/supervisor/conf.d/thermal-recorder.conf
 COPY  thermal-uploader.conf /etc/supervisor/conf.d/thermal-uploader.conf
 COPY  event-reporter.conf /etc/supervisor/conf.d/event-reporter.conf

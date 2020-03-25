@@ -18,23 +18,23 @@ type service struct {
     conn *net.UnixConn
 }
 
-func startService(unixConn *net.UnixConn) error {
+func startService(unixConn *net.UnixConn) (*service, error) {
     conn, err := dbus.SystemBus()
     if err != nil {
-        return err
+        return nil, err
     }
     reply, err := conn.RequestName(dbusName, dbus.NameFlagDoNotQueue)
     if err != nil {
-        return err
+        return nil, err
     }
     if reply != dbus.RequestNameReplyPrimaryOwner {
-        return errors.New("name already taken")
+        return nil, errors.New("name already taken")
     }
 
     s := &service{conn: unixConn}
     conn.Export(s, dbusPath, dbusName)
     conn.Export(genIntrospectable(s), dbusPath, "org.freedesktop.DBus.Introspectable")
-    return nil
+    return s, nil
 }
 
 func genIntrospectable(v interface{}) introspect.Introspectable {

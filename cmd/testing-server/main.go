@@ -44,8 +44,7 @@ func createDeviceHandler(w http.ResponseWriter, r *http.Request) {
 	deviceName := mux.Vars(r)["device-name"]
 	groupnames, ok := r.URL.Query()["group-name"]
 	if !ok {
-		log.Printf("'group-name' query parameter is missing")
-		http.Error(w, "'group-name' query parameter is missing", http.StatusBadRequest)
+		logError("'group-name' query parameter is missing", w, http.StatusBadRequest)
 	} else {
 		apiServers, ok := r.URL.Query()["api-server"]
 		apiServer := "https://api-test.cacophony.org.nz"
@@ -69,14 +68,13 @@ func createDeviceHandler(w http.ResponseWriter, r *http.Request) {
 
 		if output, err := cmd.CombinedOutput(); err != nil {
 			outputString := string(output)
-			log.Printf("Error was %v", outputString)
-			http.Error(w, outputString, http.StatusInternalServerError)
+			logError(fmt.Sprintf("Error registering device %v", outputString), w, http.StatusInternalServerError)
 		} else {
 			log.Printf("device created")
 			restartThermalUploader()
 			deviceID, err := getDeviceID()
 			if err != nil {
-				http.Error(w, fmt.Sprintf("Could not read device id %v", err), http.StatusInternalServerError)
+				logError(fmt.Sprintf("Could not read device id %v", err), w, http.StatusInternalServerError)
 				return
 			}
 			io.WriteString(w, fmt.Sprintf("%d", deviceID))
@@ -101,10 +99,6 @@ func getDeviceID() (int, error) {
 	return deviceConfig.ID, nil
 }
 
-func serverError(w *http.ResponseWriter, err error) {
-	log.Printf("server error: %v", err)
-}
-
 func triggerEventHandler(w http.ResponseWriter, r *http.Request) {
 	eventType := mux.Vars(r)["type"]
 	eventDetails := map[string]interface{}{
@@ -115,20 +109,20 @@ func triggerEventHandler(w http.ResponseWriter, r *http.Request) {
 	ts := time.Now()
 	detailsJSON, err := json.Marshal(&eventDetails)
 	if err != nil {
-		log.Printf("Could not marshal json %s: %s", eventDetails, err)
+		logError(fmt.Sprintf("Could not marshal json %s: %s", eventDetails, err), w, http.StatusInternalServerError)
 		return
 	}
 
 	conn, err := dbus.SystemBus()
 	if err != nil {
-		log.Printf("Could not connect to dbus: %s", err)
+		logError(fmt.Sprintf("Could not connect to dbus: %s", err), w, http.StatusInternalServerError)
 		return
 	}
 
 	obj := conn.Object("org.cacophony.Events", "/org/cacophony/Events")
 	call := obj.Call("org.cacophony.Events.Add", 0, string(detailsJSON), eventType, ts.UnixNano())
 	if call.Err != nil {
-		log.Printf("Could not record %s event: %s", eventType, call.Err)
+		logError(fmt.Sprintf("Could not record %s event: %s", eventType, call.Err), w, http.StatusInternalServerError)
 		return
 	}
 }
@@ -140,17 +134,23 @@ func sendCPTVFramesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	conn, err := dbus.SystemBus()
 	if err != nil {
-		log.Printf("Could not connect to dbus: %v", err)
+		logError(fmt.Sprintf("Could not connect to dbus: %v", err), w, http.StatusInternalServerError)
 		return
 	}
 	obj := conn.Object("org.cacophony.FakeLepton", "/org/cacophony/FakeLepton")
 	call := obj.Call("org.cacophony.FakeLepton.SendCPTV", 0, fileName)
 	if call.Err != nil {
-		log.Printf("Could not send cptv %s: %s", fileName, call.Err)
-		http.Error(w, fmt.Sprintf("Could not send cptv %s: %s", fileName, call.Err), http.StatusInternalServerError)
+
+		logError(fmt.Sprintf("Could not send CPTV %s: %s", fileName, call.Err), w, http.StatusInternalServerError)
+
 		return
 	}
 
 	log.Printf("Sent CPTV Frames")
 	io.WriteString(w, "Success")
+}
+
+func logError(errorString string, w http.ResponseWriter, code int) {
+	log.Printf("Error: %s", errorString)
+	http.Error(w, fmt.Sprintf(errorString), code)
 }
