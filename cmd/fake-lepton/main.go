@@ -92,7 +92,6 @@ func runMain() error {
     conn.Write([]byte("\n"))
     fmt.Printf("Listening for send cptv ...")
     select {}
-    return nil
 }
 
 func sendCPTV(conn *net.UnixConn, file string) error {

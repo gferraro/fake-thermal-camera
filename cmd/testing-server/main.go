@@ -139,7 +139,7 @@ func sendCPTVFramesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	conn, err := dbus.SystemBus()
 	if err != nil {
-		log.Printf("Could not connect to dbus: %s", fileName, err)
+		log.Printf("Could not connect to dbus: %v", err)
 		return
 	}
 	obj := conn.Object("org.cacophony.FakeLepton", "/org/cacophony/FakeLepton")
