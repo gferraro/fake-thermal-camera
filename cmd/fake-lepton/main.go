@@ -21,14 +21,13 @@ import (
     "encoding/binary"
     "errors"
     "fmt"
+    "gopkg.in/yaml.v1"
     "io"
     "log"
     "net"
     "os"
+    "sync"
     "time"
-
-    arg "github.com/alexflint/go-arg"
-    "gopkg.in/yaml.v1"
 
     "github.com/TheCacophonyProject/go-cptv"
     cptvframe "github.com/TheCacophonyProject/go-cptv/cptvframe"
@@ -41,41 +40,38 @@ const (
     framesHz    = 9
 )
 
-type Args struct {
-    CPTV string `arg:"--cptv" help:"cptv file to stream"`
-}
-
-func procArgs() Args {
-    var args Args
-    args.CPTV = "test.cptv"
-    arg.MustParse(&args)
-    return args
-}
+var (
+    mu sync.Mutex
+)
 
 func main() {
     err := runMain()
+    fmt.Printf("closing")
     if err != nil {
         log.Fatal(err)
     }
+
 }
 
 func runMain() error {
-    args := procArgs()
-    if _, err := os.Stat(args.CPTV); err != nil {
-        fmt.Printf("%v does not exist\n", args.CPTV)
-        return err
-    }
 
     log.Printf("dialing frame output socket %s\n", SEND_SOCKET)
     conn, err := net.DialUnix("unix", nil, &net.UnixAddr{
         Net:  "unix",
         Name: SEND_SOCKET,
     })
+    defer conn.Close()
+
     if err != nil {
         fmt.Printf("error %v\n", err)
         return errors.New("error: connecting to frame output socket failed")
     }
-    defer conn.Close()
+
+    log.Println("starting d-bus service")
+    err = startService(conn)
+    if err != nil {
+        return err
+    }
 
     conn.SetWriteBuffer(lepton3.FrameCols * lepton3.FrameCols * 2 * 20)
 
@@ -94,9 +90,24 @@ func runMain() error {
     }
 
     conn.Write([]byte("\n"))
+    fmt.Printf("Listening for send cptv ...")
+    select {}
+    return nil
+}
 
-    log.Print("reading frames")
-    r, err := cptv.NewFileReader(args.CPTV)
+func sendCPTV(conn *net.UnixConn, file string) error {
+    mu.Lock()
+    defer mu.Unlock()
+
+    if _, err := os.Stat(file); err != nil {
+        fmt.Printf("%v does not exist\n", file)
+        return err
+    }
+    log.Printf("sending raw frames of %v\n", file)
+    r, err := cptv.NewFileReader(file)
+    if err != nil {
+        return err
+    }
     defer r.Close()
     frame := r.Reader.EmptyFrame()
     count := 0

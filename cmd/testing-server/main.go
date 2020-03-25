@@ -114,13 +114,13 @@ func triggerEventHandler(w http.ResponseWriter, r *http.Request) {
 	ts := time.Now()
 	detailsJSON, err := json.Marshal(&eventDetails)
 	if err != nil {
-		log.Printf("Could not record %s event: %s", eventType, err)
+		log.Printf("Could not marshal json %s: %s", eventDetails, err)
 		return
 	}
 
 	conn, err := dbus.SystemBus()
 	if err != nil {
-		log.Printf("Could not record %s event: %s", eventType, err)
+		log.Printf("Could not connect to dbus: %s", err)
 		return
 	}
 
@@ -134,19 +134,22 @@ func triggerEventHandler(w http.ResponseWriter, r *http.Request) {
 
 func sendCPTVFramesHandler(w http.ResponseWriter, r *http.Request) {
 	fileName := r.URL.Query().Get("cptv-file")
-	var extraCmds []string
-	if fileName != "" {
-		extraCmds = []string{"--cptv", fileName}
+	if fileName == "" {
+		fileName = "test.cptv"
 	}
-	cmd := exec.Command("./fake-lepton", extraCmds...)
-	cmd.Dir = "/server/cmd/fake-lepton"
+	conn, err := dbus.SystemBus()
+	if err != nil {
+		log.Printf("Could not connect to dbus: %s", fileName, err)
+		return
+	}
+	obj := conn.Object("org.cacophony.FakeLepton", "/org/cacophony/FakeLepton")
+	call := obj.Call("org.cacophony.FakeLepton.SendCPTV", 0, fileName)
+	if call.Err != nil {
+		log.Printf("Could not send cptv %s: %s", fileName, call.Err)
+		http.Error(w, fmt.Sprintf("Could not send cptv %s: %s", fileName, call.Err), http.StatusInternalServerError)
+		return
+	}
 
-	if output, err := cmd.CombinedOutput(); err != nil {
-		outputString := string(output)
-		log.Printf("Error was %v\n", outputString)
-		http.Error(w, outputString, http.StatusInternalServerError)
-	} else {
-		log.Printf("Sent CPTV Frames")
-		io.WriteString(w, "Success")
-	}
+	log.Printf("Sent CPTV Frames")
+	io.WriteString(w, "Success")
 }

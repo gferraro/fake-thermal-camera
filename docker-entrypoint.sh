@@ -31,13 +31,21 @@ cd /server
 echo Building fake-lepton....
 cd cmd/fake-lepton/
 go build
+cp org.cacophony.FakeLepton.conf /etc/dbus-1/system.d/org.cacophony.FakeLepton.conf
+
+
+echo --- management interface ----
+cd /code/management-interface/
+echo Building management-interface....
+make build
+
 
 echo --- starting supervisord ---
 /usr/bin/supervisord &
 disown
 
 echo --- test-server ----
-cd ../testing-server/
+cd /server/cmd/testing-server/
 echo Building test-server....
 go build
 echo Running test server...

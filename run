@@ -108,6 +108,8 @@ run_cmd = [
     "--volume",
     os.path.dirname(os.getcwd()) + "/thermal-uploader" +  ":/code/thermal-uploader",
     "--volume",
+    os.path.dirname(os.getcwd()) + "/management-interface" +  ":/code/management-interface",
+    "--volume",
     os.environ['GOPATH'] + ":/go",
 ]
 
