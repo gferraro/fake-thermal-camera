@@ -77,6 +77,7 @@ func createDeviceHandler(w http.ResponseWriter, r *http.Request) {
 			deviceID, err := getDeviceID()
 			if err != nil {
 				http.Error(w, fmt.Sprintf("Could not read device id %v", err), http.StatusInternalServerError)
+				return
 			}
 			io.WriteString(w, fmt.Sprintf("%d", deviceID))
 		}
