@@ -115,6 +115,8 @@ run_cmd = [
     os.getcwd() + "/cmd/fake-lepton/cptv-files" + ":/cptv-files",
     "--volume",
     os.environ["GOPATH"] + ":/go",
+    "--network",
+    "host",
 ]
 
 # if args.isolate:
