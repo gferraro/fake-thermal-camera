@@ -8,9 +8,12 @@ require (
 	github.com/alexflint/go-arg v1.1.0
 	github.com/godbus/dbus v4.1.0+incompatible
 	github.com/gorilla/mux v1.7.4
+	golang.org/x/net v0.0.0-20201021035429-f5854403a974 // indirect
+	golang.org/x/sys v0.0.0-20210119212857-b64e53b001e4 // indirect
+	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
 	gopkg.in/yaml.v1 v1.0.0-20140924161607-9f9df34309c0
 )
 
 replace periph.io/x/periph => github.com/TheCacophonyProject/periph v2.0.1-0.20171123021141-d06ef89e37e8+incompatible
 
-go 1.12
+go 1.15

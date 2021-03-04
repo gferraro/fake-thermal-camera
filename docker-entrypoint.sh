@@ -1,4 +1,5 @@
 #!/bin/bash
+go version
 echo --- device-register ----
 cd /code/device-register
 echo Building device-register ....

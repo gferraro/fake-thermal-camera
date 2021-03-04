@@ -117,6 +117,8 @@ run_cmd = [
     os.environ["GOPATH"] + ":/go",
     "--network",
     "host",
+    "--cap-add",
+    "IPC_LOCK",
 ]
 
 # if args.isolate:

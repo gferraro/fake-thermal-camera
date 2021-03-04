@@ -2,7 +2,7 @@
 # Run interactive session: sudo docker run -it cacophony-api
 
 FROM golang:latest
-
+RUN go version
 RUN apt-get update
 RUN apt-get install -y apt-utils
 RUN apt-get install -y supervisor
@@ -13,7 +13,7 @@ RUN mkdir -p /var/log/supervisor
 # server for automated testing
 EXPOSE 2040
 EXPOSE 80
-    
+
 COPY  thermal-recorder.conf /etc/supervisor/conf.d/thermal-recorder.conf
 COPY  thermal-uploader.conf /etc/supervisor/conf.d/thermal-uploader.conf
 COPY  event-reporter.conf /etc/supervisor/conf.d/event-reporter.conf
